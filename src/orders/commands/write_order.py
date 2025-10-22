@@ -16,21 +16,24 @@ from db import get_sqlalchemy_session, get_redis_conn
 
 logger = Logger.get_instance("add_order")
 
+
 def add_order(user_id: int, items: list):
     """Insert order with items in MySQL, keep Redis in sync"""
     if not items:
-        raise ValueError("Cannot create order. An order must have 1 or more items.")
+        raise ValueError(
+            "Cannot create order. An order must have 1 or more items.")
 
     product_ids = [item['product_id'] for item in items]
     session = get_sqlalchemy_session()
 
     try:
         logger.debug("Commencer : ajout de commande")
-        products_query = session.query(Product).filter(Product.id.in_(product_ids)).all()
+        products_query = session.query(Product).filter(
+            Product.id.in_(product_ids)).all()
         price_map = {product.id: product.price for product in products_query}
         total_amount = 0
         order_items = []
-        
+
         for item in items:
             pid = item["product_id"]
             qty = item["quantity"]
@@ -47,22 +50,23 @@ def add_order(user_id: int, items: list):
                 'unit_price': unit_price
             })
 
-        new_order = Order(user_id=user_id, total_amount=total_amount, payment_link=None)
+        new_order = Order(user_id=user_id,
+                          total_amount=total_amount,
+                          payment_link=None)
         session.add(new_order)
-        session.flush()   
+        session.flush()
 
         order_id = new_order.id
 
-        new_order.payment_link = request_payment_link(new_order.id, total_amount, user_id)
-        session.flush()  
-        
+        new_order.payment_link = request_payment_link(new_order.id,
+                                                      total_amount, user_id)
+        session.flush()
+
         for item in order_items:
-            order_item = OrderItem(
-                order_id=order_id,
-                product_id=item['product_id'],
-                quantity=item['quantity'],
-                unit_price=item['unit_price']
-            )
+            order_item = OrderItem(order_id=order_id,
+                                   product_id=item['product_id'],
+                                   quantity=item['quantity'],
+                                   unit_price=item['unit_price'])
             session.add(order_item)
 
         # Update stock
@@ -73,7 +77,8 @@ def add_order(user_id: int, items: list):
 
         # Insert order into Redis
         update_stock_redis(order_items, '-')
-        add_order_to_redis(order_id, user_id, total_amount, items, new_order.payment_link)
+        add_order_to_redis(order_id, user_id, total_amount, items,
+                           new_order.payment_link)
         return order_id
 
     except Exception as e:
@@ -81,6 +86,7 @@ def add_order(user_id: int, items: list):
         raise e
     finally:
         session.close()
+
 
 def modify_order(order_id: int, is_paid: bool):
     session = get_sqlalchemy_session()
@@ -104,6 +110,7 @@ def modify_order(order_id: int, is_paid: bool):
     finally:
         session.close()
 
+
 def request_payment_link(order_id, total_amount, user_id):
     payment_id = 0
     payment_transaction = {
@@ -116,10 +123,11 @@ def request_payment_link(order_id, total_amount, user_id):
     print("")
     response_from_payment_service = {}
 
-    if True: # if response.ok
+    if True:  # if response.ok
         print(f"ID paiement: {payment_id}")
 
-    return f"http://api-gateway:8080/payments-api/payments/process/{payment_id}" 
+    return f"http://api-gateway:8080/payments-api/payments/process/{payment_id}"
+
 
 def delete_order(order_id: int):
     """Delete order in MySQL, keep Redis in sync"""
@@ -129,7 +137,8 @@ def delete_order(order_id: int):
         if order:
 
             # MySQL
-            order_items = session.query(OrderItem).filter(OrderItem.order_id == order_id).all()
+            order_items = session.query(OrderItem).filter(
+                OrderItem.order_id == order_id).all()
             session.delete(order)
             check_in_items_to_stock(session, order_items)
             session.commit()
@@ -137,28 +146,28 @@ def delete_order(order_id: int):
             # Redis
             update_stock_redis(order_items, '+')
             delete_order_from_redis(order_id)
-            return 1  
+            return 1
         else:
-            return 0  
-            
+            return 0
+
     except Exception as e:
         session.rollback()
         raise e
     finally:
         session.close()
 
+
 def add_order_to_redis(order_id, user_id, total_amount, items, payment_link):
     """Insert order to Redis"""
     r = get_redis_conn()
-    r.hset(
-        f"order:{order_id}",
-        mapping={
-            "user_id": user_id,
-            "total_amount": float(total_amount),
-            "items": json.dumps(items),
-            "payment_link": payment_link
-        }
-    )
+    r.hset(f"order:{order_id}",
+           mapping={
+               "user_id": user_id,
+               "total_amount": float(total_amount),
+               "items": json.dumps(items),
+               "payment_link": payment_link
+           })
+
 
 def delete_order_from_redis(order_id):
     """Delete order from Redis"""
