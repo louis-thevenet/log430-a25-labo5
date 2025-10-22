@@ -22,9 +22,10 @@ services:
        - "8089:8089"
      volumes:
        - ./locustfiles:/mnt/locust
-     command: -f /mnt/locust/locustfile.py --host=http://api-gateway:8080
+     command: -f /mnt/locust/locustfile.py --host=http://krakend:8080
      depends_on:
       - store_manager
+      - krakend
      networks:
        - labo05-network
 

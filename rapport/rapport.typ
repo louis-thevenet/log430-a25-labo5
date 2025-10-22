@@ -65,3 +65,20 @@ def process_payment(payment_id, credit_card_data):
 La commande est bien mise à jour.
 == Question 5
 _À partir de combien de requêtes par minute observez-vous les erreurs 503 ? Justifiez avec des captures d'écran de Locust._
+
+Les erreurs 503 commencent à apparaître immédiatement.
+#image("5_locust.png")
+#image("5_errors.png")
+
+
+Avec un `max_rate=100` on laisse passer un peu plus de traffic mais des erreurs 503 apparaissent toujours.
+#image("5_100.png")
+
+
+== Question 6
+_Que se passe-t-il dans le navigateur quand vous faites une requête avec un délai supérieur au timeout configuré (5 secondes) ? Quelle est l'importance du timeout dans une architecture de microservices ? Justifiez votre réponse avec des exemples pratiques._
+
+
+KrakenD renvoie une erreur lorsque le délai est dépassé. Le timeout est crucial dans une architecture de microservices pour éviter que des services ne restent bloqués en attendant une réponse. Cela permet d'améliorer la résilience et la réactivité du système en gérant les pannes de manière plus efficace.
+
+Par exemple, si un service de paiement est lent à répondre, un timeout permet au service appelant de gérer cette situation (par exemple en renvoyant une erreur à l'utilisateur ou en essayant une autre méthode de paiement) plutôt que d'attendre indéfiniment.
