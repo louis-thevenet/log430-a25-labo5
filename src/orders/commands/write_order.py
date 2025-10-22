@@ -120,10 +120,17 @@ def request_payment_link(order_id, total_amount, user_id):
     }
 
     # TODO: Requête à POST /payments
-    print("")
-    response_from_payment_service = {}
 
-    if True:  # if response.ok
+    print("")
+    # Nous n'allons pas appeler le service directement, nous appellerons KrakenD et il s'occupera d'acheminer notre requête vers le bon chemin
+    response_from_payment_service = requests.post(
+        "http://krakend:8080/payments-api/payments",
+        json=payment_transaction,
+        headers={'Content-Type': 'application/json'})
+    print(response_from_payment_service)
+    if response_from_payment_service.ok:  # if response.ok
+        payment_data = response_from_payment_service.json()
+        payment_id = payment_data.get("payment_id", 0)
         print(f"ID paiement: {payment_id}")
 
     return f"http://api-gateway:8080/payments-api/payments/process/{payment_id}"

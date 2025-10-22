@@ -12,6 +12,7 @@ from orders.queries.read_order import get_order_by_id, get_best_selling_products
 
 logger = Logger.get_instance("order_controller")
 
+
 def create_order(request):
     """Create order, use WriteOrder model"""
     payload = request.get_json() or {}
@@ -22,18 +23,23 @@ def create_order(request):
         return jsonify({'order_id': order_id}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
+
+
 def update_order(request):
     """Update order, use WriteOrder model"""
     payload = request.get_json() or {}
     order_id = payload.get('order_id')
     is_paid = payload.get('is_paid')
+
+    if isinstance(is_paid, str):
+        is_paid = is_paid.lower() == "true"
+
     logger.debug(f"Mettre à jour la commande {order_id}, status={is_paid}")
 
     try:
         # update MySQL
         status = modify_order(order_id, is_paid=is_paid)
-        
+
         # update Redis
         r = get_redis_conn()
         order = r.hgetall(f"order:{order_id}")
@@ -41,10 +47,11 @@ def update_order(request):
         r.hset(f"order:{order_id}", mapping=order)
 
         # response
-        logger.debug("Statut actuel", status)
+        logger.debug(f"Statut actuel {status}")
         return jsonify({'updated': status}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 def remove_order(order_id):
     """Delete order, use WriteOrder model"""
@@ -56,6 +63,7 @@ def remove_order(order_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 def get_order(order_id):
     """Create order, use ReadOrder model"""
     try:
@@ -63,10 +71,12 @@ def get_order(order_id):
         return jsonify(order), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
+
+
 def get_report_highest_spending_users():
     """Get orders report: highest spending users"""
     return get_highest_spending_users()
+
 
 def get_report_best_selling_products():
     """Get orders report: best selling products"""
